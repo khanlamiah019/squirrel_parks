@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squirrel Census: Behavior & Human Interaction Explorer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c5f2d;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        .filter-btn {
+            padding: 12px 24px;
+            border: 2px solid #2c5f2d;
+            background: white;
+            color: #2c5f2d;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+        
+        .filter-btn:hover {
+            background: #2c5f2d;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(44, 95, 45, 0.3);
+        }
+        
+        .filter-btn.active {
+            background: #2c5f2d;
+            color: white;
+        }
+        
+        select {
+            padding: 10px 20px;
+            border: 2px solid #2c5f2d;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            background: white;
+            color: #2c5f2d;
+            font-weight: 600;
+        }
+        
+        .visualization {
+            margin-top: 30px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .bar {
+            transition: all 0.3s ease;
+        }
+        
+        .bar:hover {
+            opacity: 0.8;
+            stroke: #333;
+            stroke-width: 2;
+        }
+        
+        .axis text {
+            font-size: 12px;
+        }
+        
+        .axis-label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 150px;
+            flex: 1;
+        }
+        
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #2c5f2d;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐿️ Central Park Squirrel Census Explorer</h1>
+        <p class="subtitle">Interactive exploration of squirrel behaviors and human interactions (October 2018)</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Fur Color Filter:</label>
+                <div style="display: flex; gap: 10px;">
+                    <button class="filter-btn active" data-color="All">All Colors</button>
+                    <button class="filter-btn" data-color="Gray">Gray</button>
+                    <button class="filter-btn" data-color="Cinnamon">Cinnamon</button>
+                    <button class="filter-btn" data-color="Black">Black</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>View Type:</label>
+                <select id="viewType">
+                    <option value="behavior">Behavior Patterns</option>
+                    <option value="interaction">Human Interaction</option>
+                    <option value="activity">Activity Levels</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="visualization">
+            <svg id="chart"></svg>
+        </div>
+        
+        <div class="legend" id="legend"></div>
+        
+        <div class="stats" id="stats"></div>
+        
+        <div class="info-box">
+            <p><strong>How to explore:</strong> Use the fur color filters to compare behaviors across squirrel types. Switch between different view types to explore various aspects of squirrel behavior. Hover over bars to see detailed statistics.</p>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Configuration
+        const margin = {top: 40, right: 30, bottom: 80, left: 60};
+        const width = 1200 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+        
+        // Color schemes
+        const colorSchemes = {
+            'Gray': '#8B8680',
+            'Cinnamon': '#D2691E',
+            'Black': '#2F2F2F'
+        };
+        
+        let rawData = [];
+        let currentFilter = 'All';
+        let currentView = 'behavior';
+        
+        // Create SVG
+        const svg = d3.select('#chart')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        // Tooltip
+        const tooltip = d3.select('#tooltip');
+        
+        // Helper function to check if value is truthy
+        function isTrue(value) {
+            if (!value) return false;
+            const str = String(value).trim().toUpperCase();
+            return str === 'TRUE' || str === '1' || str === 'YES';
+        }
+        
+        // Load and process data
+        d3.csv('https://raw.githubusercontent.com/khanlamiah019/squirrel_parks/main/squirrel_output.csv').then(data => {
+            // Clean and normalize the data
+            rawData = data.map(d => {
+                const cleaned = {};
+                Object.keys(d).forEach(key => {
+                    const cleanKey = key.trim();
+                    cleaned[cleanKey] = d[key] ? d[key].trim() : '';
+                });
+                return cleaned;
+            });
+            
+            updateVisualization();
+        }).catch(error => {
+            console.error('Error loading data:', error);
+        });
+        
+        // Event listeners
+        d3.selectAll('.filter-btn').on('click', function() {
+            d3.selectAll('.filter-btn').classed('active', false);
+            d3.select(this).classed('active', true);
+            currentFilter = this.dataset.color;
+            updateVisualization();
+        });
+        
+        d3.select('#viewType').on('change', function() {
+            currentView = this.value;
+            updateVisualization();
+        });
+        
+        function updateVisualization() {
+            if (rawData.length === 0) return;
+            
+            // Filter data
+            let filteredData = rawData;
+            if (currentFilter !== 'All') {
+                filteredData = rawData.filter(d => d['Primary Fur Color'] === currentFilter);
+            }
+            
+            // Prepare data based on view type
+            let chartData;
+            let xLabel, yLabel, title;
+            
+            if (currentView === 'behavior') {
+                chartData = prepareBehaviorData(filteredData);
+                xLabel = 'Behavior Type';
+                yLabel = 'Number of Observations';
+                title = 'Squirrel Behavior Patterns';
+            } else if (currentView === 'interaction') {
+                chartData = prepareInteractionData(filteredData);
+                xLabel = 'Interaction Type';
+                yLabel = 'Number of Squirrels';
+                title = 'Human-Squirrel Interactions';
+            } else {
+                chartData = prepareActivityData(filteredData);
+                xLabel = 'Activity Type';
+                yLabel = 'Number of Observations';
+                title = 'Squirrel Activity Levels';
+            }
+            
+            // Update chart
+            drawChart(chartData, xLabel, yLabel, title);
+            updateStats(filteredData, chartData);
+        }
+        
+        function prepareBehaviorData(data) {
+            const behaviors = ['Running', 'Climbing', 'Eating', 'Foraging', 'Chasing'];
+            return behaviors.map(behavior => {
+                const count = data.filter(d => isTrue(d[behavior])).length;
+                return {
+                    category: behavior,
+                    value: count,
+                    percentage: data.length > 0 ? (count / data.length * 100).toFixed(1) : 0
+                };
+            });
+        }
+        
+        function prepareInteractionData(data) {
+            const approachesCount = data.filter(d => isTrue(d['Approaches'])).length;
+            const indifferentCount = data.filter(d => isTrue(d['Indifferent'])).length;
+            const runsFromCount = data.filter(d => isTrue(d['Runs from'])).length;
+            
+            return [
+                {
+                    category: 'Approaches',
+                    value: approachesCount,
+                    percentage: data.length > 0 ? (approachesCount / data.length * 100).toFixed(1) : 0
+                },
+                {
+                    category: 'Indifferent',
+                    value: indifferentCount,
+                    percentage: data.length > 0 ? (indifferentCount / data.length * 100).toFixed(1) : 0
+                },
+                {
+                    category: 'Runs From',
+                    value: runsFromCount,
+                    percentage: data.length > 0 ? (runsFromCount / data.length * 100).toFixed(1) : 0
+                }
+            ];
+        }
+        
+        function prepareActivityData(data) {
+            const activities = [
+                { key: 'Kuks', label: 'Kuks' },
+                { key: 'Quaas', label: 'Quaas' },
+                { key: 'Moans', label: 'Moans' },
+                { key: 'Tail flags', label: 'Tail Flags' },
+                { key: 'Tail twitches', label: 'Tail Twitches' }
+            ];
+            
+            return activities.map(activity => {
+                const count = data.filter(d => isTrue(d[activity.key])).length;
+                return {
+                    category: activity.label,
+                    value: count,
+                    percentage: data.length > 0 ? (count / data.length * 100).toFixed(1) : 0
+                };
+            });
+        }
+        
+        function drawChart(data, xLabel, yLabel, title) {
+            // Clear previous chart
+            svg.selectAll('*').remove();
+            
+            // Scales
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.category))
+                .range([0, width])
+                .padding(0.2);
+            
+            const maxValue = d3.max(data, d => d.value);
+            const y = d3.scaleLinear()
+                .domain([0, maxValue > 0 ? maxValue : 100])
+                .nice()
+                .range([height, 0]);
+            
+            // Color scale
+            const color = d3.scaleOrdinal()
+                .domain(data.map(d => d.category))
+                .range(['#2c5f2d', '#97bc62', '#d4a373', '#8b7355', '#5d8233']);
+            
+            // Bars with animation
+            svg.selectAll('.bar')
+                .data(data)
+                .join(
+                    enter => enter.append('rect')
+                        .attr('class', 'bar')
+                        .attr('x', d => x(d.category))
+                        .attr('width', x.bandwidth())
+                        .attr('y', height)
+                        .attr('height', 0)
+                        .attr('fill', d => color(d.category))
+                        .attr('rx', 8)
+                        .call(enter => enter.transition()
+                            .duration(800)
+                            .attr('y', d => y(d.value))
+                            .attr('height', d => height - y(d.value))
+                        ),
+                    update => update
+                        .call(update => update.transition()
+                            .duration(800)
+                            .attr('x', d => x(d.category))
+                            .attr('width', x.bandwidth())
+                            .attr('y', d => y(d.value))
+                            .attr('height', d => height - y(d.value))
+                            .attr('fill', d => color(d.category))
+                        )
+                )
+                .on('mouseover', function(event, d) {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .attr('opacity', 0.7);
+                    
+                    tooltip
+                        .style('opacity', 1)
+                        .html(`
+                            <strong>${d.category}</strong><br/>
+                            Count: ${d.value.toLocaleString()}<br/>
+                            Percentage: ${d.percentage}%
+                        `)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .attr('opacity', 1);
+                    
+                    tooltip.style('opacity', 0);
+                });
+            
+            // X Axis
+            svg.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll('text')
+                .attr('transform', 'rotate(-45)')
+                .style('text-anchor', 'end')
+                .attr('dx', '-.8em')
+                .attr('dy', '.15em');
+            
+            // Y Axis
+            svg.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+            
+            // X Axis Label
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('text-anchor', 'middle')
+                .attr('x', width / 2)
+                .attr('y', height + 70)
+                .text(xLabel);
+            
+            // Y Axis Label
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('text-anchor', 'middle')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2)
+                .attr('y', -40)
+                .text(yLabel);
+            
+            // Title
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', -10)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '18px')
+                .style('font-weight', '600')
+                .style('fill', '#2c5f2d')
+                .text(title);
+            
+            // Update legend
+            updateLegend(data, color);
+        }
+        
+        function updateLegend(data, color) {
+            const legend = d3.select('#legend');
+            legend.selectAll('*').remove();
+            
+            const legendItems = legend.selectAll('.legend-item')
+                .data(data)
+                .join('div')
+                .attr('class', 'legend-item');
+            
+            legendItems.append('div')
+                .attr('class', 'legend-color')
+                .style('background-color', d => color(d.category));
+            
+            legendItems.append('span')
+                .text(d => `${d.category}: ${d.value}`);
+        }
+        
+        function updateStats(data, chartData) {
+            const stats = d3.select('#stats');
+            stats.selectAll('*').remove();
+            
+            const totalObservations = data.length;
+            const mostCommonBehavior = chartData.reduce((a, b) => a.value > b.value ? a : b);
+            const avgBehaviorCount = chartData.length > 0 ? d3.mean(chartData, d => d.value).toFixed(0) : 0;
+            
+            const statsData = [
+                { label: 'Total Squirrels', value: totalObservations },
+                { label: 'Most Common', value: mostCommonBehavior.category },
+                { label: 'Avg Count', value: avgBehaviorCount }
+            ];
+            
+            stats.selectAll('.stat-card')
+                .data(statsData)
+                .join('div')
+                .attr('class', 'stat-card')
+                .html(d => `<h3>${d.value}</h3><p>${d.label}</p>`);
+        }
+    </script>
+</body>
+</html>
